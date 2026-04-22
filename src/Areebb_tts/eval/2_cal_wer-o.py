@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import json
 from pathlib import Path
 
@@ -7,7 +7,7 @@ from datasets import load_dataset
 from omnilingual_asr.models.inference.pipeline import ASRInferencePipeline
 from tqdm import tqdm
 
-from habibi_tts.eval.utils_eval import normalize_arabic_text, word_error_rate
+from Areebb_tts.eval.utils_eval import normalize_arabic_text, word_error_rate
 
 
 device = (
@@ -39,7 +39,7 @@ lang_map = {
 
 
 def calculate_wer(pipeline, wav_dir, dialect, batch_size):
-    benchmark = load_dataset("SWivid/Habibi", dialect, split="test")
+    benchmark = load_dataset("SWivid/Areebb_tts", dialect, split="test")
 
     audio_path_batch = []
     gt_text_batch = []
@@ -124,3 +124,4 @@ if __name__ == "__main__":
 
     print(f"Global WER-O: {word_error_rate(pr_text_norms, gt_text_norms)}")
     print(f"Single WER-O results saved to {wer_result_path}")
+

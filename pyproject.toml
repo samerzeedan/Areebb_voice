@@ -1,11 +1,11 @@
-[build-system]
+﻿[build-system]
 requires = ["setuptools >= 61.0", "setuptools-scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "habibi-tts"
+name = "Areebb_tts"
 version = "0.1.1"
-description = "Habibi: Laying the Open-Source Foundation of Unified-Dialectal Arabic Speech Synthesis"
+description = "Areebb_tts: Laying the Open-Source Foundation of Unified-Dialectal Arabic Speech Synthesis"
 readme = "README.md"
 license = {text = "MIT License"}
 classifiers = [
@@ -16,11 +16,18 @@ classifiers = [
 dependencies = [
     "f5-tts>=1.1.5",
     "torch>=2.4.0, <2.9.0",
+    "fastapi",
+    "uvicorn",
+    "jinja2",
+    "python-multipart",
+    "requests",
 ]
 
 [project.urls]
-Homepage = "https://github.com/SWivid/Habibi-TTS"
+Homepage = "https://github.com/SWivid/Areebb_tts"
 
 [project.scripts]
-"habibi-tts_infer-cli" = "habibi_tts.infer.infer_cli:main"
-"habibi-tts_infer-gradio" = "habibi_tts.infer.infer_gradio:main"
+"Areebb_tts_infer-cli" = "Areebb_tts.infer.infer_cli:main"
+"Areebb_tts_infer-gradio" = "Areebb_tts.infer.infer_gradio:main"
+"Areeb_site" = "Areebb_tts.site.app:run"
+

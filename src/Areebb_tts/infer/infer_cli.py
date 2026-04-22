@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import codecs
 import os
 import re
@@ -20,7 +20,7 @@ from hydra.utils import get_class
 from omegaconf import OmegaConf
 from unidecode import unidecode
 
-from habibi_tts.infer.utils_infer import (
+from Areebb_tts.infer.utils_infer import (
     cfg_strength,
     cross_fade_duration,
     device,
@@ -31,19 +31,19 @@ from habibi_tts.infer.utils_infer import (
     sway_sampling_coef,
     target_rms,
 )
-from habibi_tts.model.utils import dialect_id_map
+from Areebb_tts.model.utils import dialect_id_map
 
 
 parser = argparse.ArgumentParser(
     prog="python3 infer-cli.py",
-    description="Commandline interface for Habibi-TTS.",
+    description="Commandline interface for Areebb_tts.",
     epilog="Specify options above to override one or more settings from config.",
 )
 parser.add_argument(
     "-c",
     "--config",
     type=str,
-    default=os.path.join(files("habibi_tts").joinpath("infer"), "example.toml"),
+    default=os.path.join(files("Areebb_tts").joinpath("infer"), "example.toml"),
     help="The configuration file, default see infer/example.toml",
 )
 
@@ -68,7 +68,7 @@ parser.add_argument(
     "-mc",
     "--model_cfg",
     type=str,
-    help="The path to Habibi-TTS model config file .yaml",
+    help="The path to Areebb_tts model config file .yaml",
 )
 parser.add_argument(
     "-p",
@@ -238,14 +238,14 @@ device = args.device or config.get("device", device)
 
 # patches for pip pkg user
 if "assets/" in ref_audio:
-    ref_audio = str(files("habibi_tts").joinpath(f"{ref_audio}"))
+    ref_audio = str(files("Areebb_tts").joinpath(f"{ref_audio}"))
 if "assets/" in gen_file:
-    gen_file = str(files("habibi_tts").joinpath(f"{gen_file}"))
+    gen_file = str(files("Areebb_tts").joinpath(f"{gen_file}"))
 if "voices" in config:
     for voice in config["voices"]:
         voice_ref_audio = config["voices"][voice]["ref_audio"]
         if "assets/" in voice_ref_audio:
-            config["voices"][voice]["ref_audio"] = str(files("habibi_tts").joinpath(f"{voice_ref_audio}"))
+            config["voices"][voice]["ref_audio"] = str(files("Areebb_tts").joinpath(f"{voice_ref_audio}"))
 
 
 # ignore gen_text if gen_file provided
@@ -275,8 +275,8 @@ vocoder_name = model_cfg.model.mel_spec.mel_spec_type
 
 if not ckpt_file:
     if model == "Unified":
-        ckpt_file = str(cached_path("hf://SWivid/Habibi-TTS/Unified/model_200000.safetensors"))
-        vocab_file = str(cached_path("hf://SWivid/Habibi-TTS/Unified/vocab.txt"))
+        ckpt_file = str(cached_path("hf://SWivid/Areebb_tts/Unified/model_200000.safetensors"))
+        vocab_file = str(cached_path("hf://SWivid/Areebb_tts/Unified/vocab.txt"))
     elif model == "Specialized":
         if dialect in ["MSA", "SAU"]:
             ckpt_step = 200000
@@ -284,17 +284,17 @@ if not ckpt_file:
             ckpt_step = 100000
         else:  # "UNK", "OMN", "TUN", "LEV", "SDN", "LBY" has no available specialized pretrained
             raise AttributeError(
-                f"[Code infer_cli.py] dialect [{dialect}] not supported with [{model}]. Use [habibi-tts_infer-cli --help] to check."
+                f"[Code infer_cli.py] dialect [{dialect}] not supported with [{model}]. Use [Areebb_tts_infer-cli --help] to check."
             )
-        ckpt_file = str(cached_path(f"hf://SWivid/Habibi-TTS/Specialized/{dialect}/model_{ckpt_step}.safetensors"))
-        vocab_file = str(cached_path(f"hf://SWivid/Habibi-TTS/Specialized/{dialect}/vocab.txt"))
+        ckpt_file = str(cached_path(f"hf://SWivid/Areebb_tts/Specialized/{dialect}/model_{ckpt_step}.safetensors"))
+        vocab_file = str(cached_path(f"hf://SWivid/Areebb_tts/Specialized/{dialect}/vocab.txt"))
     else:
         raise AttributeError(f"[Code infer_cli.py] unexpected model choice: {model}")
     print(f"Using [{model}] model to generated [{dialect}] dialectal text...")
 
 elif ckpt_file.startswith("hf://"):
     assert vocab_file.startswith("hf://"), (
-        "[Code infer_cli.py] ckpt_file & vocab_file should be paired if hf://. Use [habibi-tts_infer-cli --help] to check."
+        "[Code infer_cli.py] ckpt_file & vocab_file should be paired if hf://. Use [Areebb_tts_infer-cli --help] to check."
     )
     ckpt_file = str(cached_path(ckpt_file))
     vocab_file = str(cached_path(vocab_file))
@@ -404,3 +404,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

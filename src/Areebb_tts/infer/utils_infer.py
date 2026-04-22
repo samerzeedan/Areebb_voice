@@ -1,4 +1,4 @@
-# A unified script for inference process
+﻿# A unified script for inference process
 # Make adjustments inside functions, and consider both gradio and cli scripts if need to change func output format
 import os
 import sys
@@ -15,7 +15,7 @@ import torch
 import torchaudio
 import tqdm
 
-from habibi_tts.model.utils import text_list_formatter
+from Areebb_tts.model.utils import text_list_formatter
 
 
 device = (
@@ -285,3 +285,4 @@ def infer_batch_process(
 
         else:
             yield None, target_sample_rate, None
+

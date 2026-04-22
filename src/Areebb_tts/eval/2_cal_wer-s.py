@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import json
 from pathlib import Path
 
@@ -8,7 +8,7 @@ from datasets import load_dataset
 from tqdm import tqdm
 from transformers import Wav2Vec2CTCTokenizer, Wav2Vec2ForCTC, Wav2Vec2Processor
 
-from habibi_tts.eval.utils_eval import normalize_arabic_text, word_error_rate
+from Areebb_tts.eval.utils_eval import normalize_arabic_text, word_error_rate
 
 
 device = (
@@ -40,7 +40,7 @@ def calculate_wer(wav_dir, dialect):
     else:
         raise ValueError(f"[Code 2_cal_wer-s.py] no available ASR model for {dialect} yet")
 
-    benchmark = load_dataset("SWivid/Habibi", dialect, split="test")
+    benchmark = load_dataset("SWivid/Areebb_tts", dialect, split="test")
 
     wer_objs = []
     for b in tqdm(benchmark):
@@ -117,3 +117,4 @@ if __name__ == "__main__":
 
     print(f"Global WER-S: {word_error_rate(pr_text_norms, gt_text_norms)}")
     print(f"Single WER-S results saved to {wer_result_path}")
+

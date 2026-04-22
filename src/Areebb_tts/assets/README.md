@@ -1,6 +1,6 @@
-## Reference Prompts Examples Used for Inference
+﻿## Reference Prompts Examples Used for Inference
 
-1. MP3 files are from ElevenLabs voice library, named same as Voice ID, WAV files are from [Habibi benchmark](https://huggingface.co/datasets/SWivid/Habibi). See the [Habibi paper](https://arxiv.org/abs/2601.13802) for more details.
+1. MP3 files are from ElevenLabs voice library, named same as Voice ID, WAV files are from [Areebb_tts benchmark](https://huggingface.co/datasets/SWivid/Areebb_tts). See the [Areebb_tts paper](https://arxiv.org/abs/2601.13802) for more details.
 2. The terminology does not reflect any official classification for Arabic. Each sample is just for example, only reflects a part of the corresponding ID.
 
 
@@ -69,3 +69,4 @@ N/A
 
 ### UNK (Unknown)
 N/A
+

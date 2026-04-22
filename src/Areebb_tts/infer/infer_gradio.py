@@ -1,4 +1,4 @@
-# ruff: noqa: E402
+﻿# ruff: noqa: E402
 # Above allows ruff to ignore E402: module level import not at top of file
 
 import json
@@ -43,8 +43,8 @@ from f5_tts.infer.utils_infer import (
 )
 from f5_tts.model import DiT
 
-from habibi_tts.infer.utils_infer import infer_process
-from habibi_tts.model.utils import dialect_id_map
+from Areebb_tts.infer.utils_infer import infer_process
+from Areebb_tts.model.utils import dialect_id_map
 
 
 vocoder = load_vocoder()
@@ -71,24 +71,24 @@ else:
 
 # common used configs and vocabs
 v1_base_cfg = dict(dim=1024, depth=22, heads=16, ff_mult=2, text_dim=512, conv_layers=4)
-uni_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Unified/vocab.txt"))
-alg_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/ALG/vocab.txt"))
-egy_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/EGY/vocab.txt"))
-irq_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/IRQ/vocab.txt"))
-mar_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/MAR/vocab.txt"))
-msa_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/MSA/vocab.txt"))
-sau_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/SAU/vocab.txt"))
-uae_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/UAE/vocab.txt"))
+uni_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Unified/vocab.txt"))
+alg_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/ALG/vocab.txt"))
+egy_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/EGY/vocab.txt"))
+irq_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/IRQ/vocab.txt"))
+mar_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/MAR/vocab.txt"))
+msa_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/MSA/vocab.txt"))
+sau_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/SAU/vocab.txt"))
+uae_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/UAE/vocab.txt"))
 
 # text-to-speech language model gallery
-uni_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Unified/model_200000.safetensors"))
-alg_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/ALG/model_100000.safetensors"))
-egy_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/EGY/model_100000.safetensors"))
-irq_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/IRQ/model_100000.safetensors"))
-mar_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/MAR/model_100000.safetensors"))
-msa_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/MSA/model_200000.safetensors"))
-sau_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/SAU/model_200000.safetensors"))
-uae_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/UAE/model_100000.safetensors"))
+uni_model_path = str(cached_path("hf://SWivid/Areebb_tts/Unified/model_200000.safetensors"))
+alg_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/ALG/model_100000.safetensors"))
+egy_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/EGY/model_100000.safetensors"))
+irq_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/IRQ/model_100000.safetensors"))
+mar_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/MAR/model_100000.safetensors"))
+msa_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/MSA/model_200000.safetensors"))
+sau_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/SAU/model_200000.safetensors"))
+uae_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/UAE/model_100000.safetensors"))
 
 unified_model = (
     load_model(
@@ -168,48 +168,48 @@ tts_lang_model_collections = {
 tts_lang_ref_examples_collections = {
     "MSA (Modern Standard Arabic)": [
         [
-            files("habibi_tts").joinpath("assets/MSA.mp3"),
+            files("Areebb_tts").joinpath("assets/MSA.mp3"),
             "كان اللعيب حاضرًا في العديد من الأنشطة والفعاليات المرتبطة بكأس العالم، مما سمح للجماهير بالتفاعل معه والتقاط الصور التذكارية.",
         ],
     ],
     "SAU (Najdi, Hijazi, Gulf, etc.)": [
         [
-            files("habibi_tts").joinpath("assets/Najdi.wav"),
+            files("Areebb_tts").joinpath("assets/Najdi.wav"),
             "تكفى طمني انا اليوم ماني بنايم ولا هو بداخل عيني النوم الين اتطمن عليه.",
         ],
         [
-            files("habibi_tts").joinpath("assets/Hijazi.wav"),
+            files("Areebb_tts").joinpath("assets/Hijazi.wav"),
             "ابغاك تحقق معاه بس بشكل ودي لانه سلطان يمر بظروف صعبة شوية.",
         ],
         [
-            files("habibi_tts").joinpath("assets/Gulf.wav"),
+            files("Areebb_tts").joinpath("assets/Gulf.wav"),
             "وين تو الناس متى تصحى ومتى تفطر وتغير يبيلك ساعة يعني بالله تروح الشغل الساعة عشره.",
         ],
     ],
     "UAE (Emirati)": [
         [
-            files("habibi_tts").joinpath("assets/UAE.wav"),
+            files("Areebb_tts").joinpath("assets/UAE.wav"),
             "قمنا نشتريها بشكل متكرر أو لما نلقى ستايل يعجبنا وحياناً هذا الستايل ما نحبه.",
         ],
     ],
     "ALG (Algerian & Algerian Saharan)": [
-        [files("habibi_tts").joinpath("assets/ALG.wav"), "أنيا هكا باغية ناكل هكا أني ن نشوف فيها الحاجة هذيكا."],
+        [files("Areebb_tts").joinpath("assets/ALG.wav"), "أنيا هكا باغية ناكل هكا أني ن نشوف فيها الحاجة هذيكا."],
     ],
     "IRQ (Mesopotamian & North Mesopotamian)": [
         [
-            files("habibi_tts").joinpath("assets/IRQ.wav"),
+            files("Areebb_tts").joinpath("assets/IRQ.wav"),
             "يعني ااا ما نقدر ناخذ وقت أكثر، ااا لأنه شروط كلش يحتاجلها وقت.",
         ],
     ],
     "EGY (Egyptian, Saidi, etc.)": [
         [
-            files("habibi_tts").joinpath("assets/EGY.mp3"),
+            files("Areebb_tts").joinpath("assets/EGY.mp3"),
             "ايه الكلام. بقولك ايه. استخدم صوتي في المحادثات. استخدمه هيعجبك اوي.",
         ],
     ],
     "MAR (Moroccan or Darija)": [
         [
-            files("habibi_tts").joinpath("assets/MAR.mp3"),
+            files("Areebb_tts").joinpath("assets/MAR.mp3"),
             "إذا بغيتي شي صوت باللهجة المغربية للإعلانات ديالك هذا أحسن واحد غادي تلقاه.",
         ],
     ],
@@ -781,9 +781,9 @@ with gr.Blocks() as app_multistyle:
 with gr.Blocks() as app:
     gr.Markdown(
         f"""
-        # [Habibi](https://arxiv.org/abs/2601.13802): Laying the Open-Source Foundation of Unified-Dialectal Arabic Speech Synthesis
+        # [Areebb_tts](https://arxiv.org/abs/2601.13802): Laying the Open-Source Foundation of Unified-Dialectal Arabic Speech Synthesis
 
-        This is {"a local web UI" if not USING_SPACES else "an online demo"} for [Habibi-TTS](https://github.com/SWivid/Habibi-TTS).
+        This is {"a local web UI" if not USING_SPACES else "an online demo"} for [Areebb_tts](https://github.com/SWivid/Areebb_tts).
 
         Several notes:
 
@@ -861,3 +861,4 @@ if __name__ == "__main__":
         main()
     else:
         app.queue().launch()
+

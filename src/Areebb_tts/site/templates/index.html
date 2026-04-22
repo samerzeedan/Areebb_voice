@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Areeb Site</title>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+    <header class="topbar">
+        <div>
+            <h1>Areeb Site</h1>
+            <p>Character TTS + Voice Chat</p>
+        </div>
+        <div class="badge">LLM: {{ model_name }}</div>
+    </header>
+
+    <main class="container">
+        <aside class="sidebar">
+            <h2>Character</h2>
+            <label for="character-select">Choose character</label>
+            <select id="character-select"></select>
+
+            <label for="model-select">TTS model</label>
+            <select id="model-select">
+                <option value="Unified">Unified</option>
+                <option value="Specialized">Specialized</option>
+            </select>
+
+            <p class="hint">Specialized works for selected dialects only.</p>
+        </aside>
+
+        <section class="content">
+            <div class="tabs">
+                <button id="tab-tts" class="tab active">Script to Voice</button>
+                <button id="tab-chat" class="tab">Voice Chat</button>
+            </div>
+
+            <section id="panel-tts" class="panel active">
+                <h3>Create audio from text</h3>
+                <textarea id="tts-input" rows="7" placeholder="Write your script here..."></textarea>
+                <button id="tts-generate" class="primary">Generate Audio</button>
+                <audio id="tts-audio" controls></audio>
+                <p id="tts-status" class="status"></p>
+            </section>
+
+            <section id="panel-chat" class="panel">
+                <h3>Chat with selected character</h3>
+                <div id="chat-box" class="chat-box"></div>
+                <div class="chat-input-row">
+                    <textarea id="chat-input" rows="3" placeholder="Write your message..."></textarea>
+                    <button id="chat-send" class="primary">Send</button>
+                </div>
+                <audio id="chat-audio" controls></audio>
+                <p id="chat-status" class="status"></p>
+            </section>
+        </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 
 
@@ -20,8 +20,8 @@ from hydra.utils import get_class
 from omegaconf import OmegaConf
 from tqdm import tqdm
 
-from habibi_tts.eval.utils_eval import get_inference_prompt
-from habibi_tts.infer.utils_infer import (
+from Areebb_tts.eval.utils_eval import get_inference_prompt
+from Areebb_tts.infer.utils_infer import (
     cfg_strength,
     nfe_step,
     sway_sampling_coef,
@@ -32,7 +32,7 @@ from habibi_tts.infer.utils_infer import (
 accelerator = Accelerator()
 device = f"cuda:{accelerator.process_index}"
 
-rel_path = str(files("habibi_tts").joinpath("../../"))
+rel_path = str(files("Areebb_tts").joinpath("../../"))
 
 
 def single_infer(b, output_dir, ema_model, vocoder, target_sample_rate, seed=0):
@@ -70,8 +70,8 @@ def main():
     single = args.single
 
     if model == "Unified":
-        ckpt_file = str(cached_path("hf://SWivid/Habibi-TTS/Unified/model_200000.safetensors"))
-        vocab_file = str(cached_path("hf://SWivid/Habibi-TTS/Unified/vocab.txt"))
+        ckpt_file = str(cached_path("hf://SWivid/Areebb_tts/Unified/model_200000.safetensors"))
+        vocab_file = str(cached_path("hf://SWivid/Areebb_tts/Unified/vocab.txt"))
         wrap_text_with_dialect_id = True
     elif model == "Specialized":
         if dialect in ["MSA", "SAU"]:
@@ -80,8 +80,8 @@ def main():
             ckpt_step = 100000
         else:
             raise ValueError(f"[Code 1_infer_batch.py] unexpected dialect choice: {dialect}")
-        ckpt_file = str(cached_path(f"hf://SWivid/Habibi-TTS/Specialized/{dialect}/model_{ckpt_step}.safetensors"))
-        vocab_file = str(cached_path(f"hf://SWivid/Habibi-TTS/Specialized/{dialect}/vocab.txt"))
+        ckpt_file = str(cached_path(f"hf://SWivid/Areebb_tts/Specialized/{dialect}/model_{ckpt_step}.safetensors"))
+        vocab_file = str(cached_path(f"hf://SWivid/Areebb_tts/Specialized/{dialect}/vocab.txt"))
         wrap_text_with_dialect_id = False
     else:
         raise ValueError(f"[Code 1_infer_batch.py] unexpected model choice: {model}")
@@ -98,7 +98,7 @@ def main():
     vocoder = load_vocoder(vocoder_name=mel_spec_type, is_local=False, local_path="", device=device)
 
     # pull benchmark dataset
-    benchmark = load_dataset("SWivid/Habibi", dialect, split="test")
+    benchmark = load_dataset("SWivid/Areebb_tts", dialect, split="test")
 
     spk_id_dict = defaultdict(list)
     for obj in benchmark:
@@ -128,7 +128,7 @@ def main():
     )
     accelerator.wait_for_everyone()
 
-    output_dir = f"{rel_path}/results/Habibi/{dialect}_{model}{'_single' if single else ''}"
+    output_dir = f"{rel_path}/results/Areebb_tts/{dialect}_{model}{'_single' if single else ''}"
     if not os.path.exists(output_dir) and accelerator.is_main_process:
         os.makedirs(output_dir)
 
@@ -149,3 +149,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import os
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
@@ -11,16 +11,16 @@ from elevenlabs.core.api_error import ApiError
 from tqdm import tqdm
 
 
-rel_path = str(files("habibi_tts").joinpath("../../"))
+rel_path = str(files("Areebb_tts").joinpath("../../"))
 
 voice_id_map = {
     "MSA": "JjTirzdD7T3GMLkwdd3a",
-    "SAU-Najdi": f"{rel_path}/src/habibi_tts/assets/Najdi.wav",
-    "SAU-Hijazi": f"{rel_path}/src/habibi_tts/assets/Hijazi.wav",
-    "SAU-Gulf": f"{rel_path}/src/habibi_tts/assets/Gulf.wav",
-    "UAE": f"{rel_path}/src/habibi_tts/assets/UAE.wav",
-    "ALG": f"{rel_path}/src/habibi_tts/assets/ALG.wav",
-    "IRQ": f"{rel_path}/src/habibi_tts/assets/IRQ.wav",
+    "SAU-Najdi": f"{rel_path}/src/Areebb_tts/assets/Najdi.wav",
+    "SAU-Hijazi": f"{rel_path}/src/Areebb_tts/assets/Hijazi.wav",
+    "SAU-Gulf": f"{rel_path}/src/Areebb_tts/assets/Gulf.wav",
+    "UAE": f"{rel_path}/src/Areebb_tts/assets/UAE.wav",
+    "ALG": f"{rel_path}/src/Areebb_tts/assets/ALG.wav",
+    "IRQ": f"{rel_path}/src/Areebb_tts/assets/IRQ.wav",
     "EGY": "IES4nrmZdUBHByLBde0P",
     "MAR": "OfGMGmhShO8iL9jCkXy8",
 }
@@ -37,7 +37,7 @@ def single_api_call(b, output_dir, api_key, language_code, seed):
     client = ElevenLabs(api_key=api_key)
 
     voice_id_entry = voice_id_map.get(gen_dialect, "JjTirzdD7T3GMLkwdd3a")
-    if "habibi_tts" in voice_id_entry:
+    if "Areebb_tts" in voice_id_entry:
         voice = client.voices.ivc.create(
             name=os.path.splitext(voice_id_entry.split("/")[-1])[0],
             description=voice_id_entry,
@@ -87,7 +87,7 @@ def main():
     dialect = args.dialect
 
     # pull benchmark dataset
-    benchmark = load_dataset("SWivid/Habibi", dialect, split="test")
+    benchmark = load_dataset("SWivid/Areebb_tts", dialect, split="test")
 
     spk_id_dict = defaultdict(list)
     for obj in benchmark:
@@ -123,3 +123,4 @@ if __name__ == "__main__":
     main()
 
     # client.voices.delete(voice_id="")  # delete uploaded voice if wish
+

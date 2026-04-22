@@ -1,4 +1,4 @@
-# Example template for benchmark use
+﻿# Example template for benchmark use
 
 import argparse
 from collections import defaultdict
@@ -14,7 +14,7 @@ def main():
     args = parser.parse_args()
 
     # pull benchmark dataset
-    benchmark = load_dataset("SWivid/Habibi", args.dialect, split="test")
+    benchmark = load_dataset("SWivid/Areebb_tts", args.dialect, split="test")
 
     spk_id_dict = defaultdict(list)
     for obj in benchmark:
@@ -54,3 +54,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

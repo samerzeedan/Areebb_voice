@@ -1,4 +1,4 @@
-# For speaker similarity evaluation, third-party code from
+﻿# For speaker similarity evaluation, third-party code from
 # https://github.com/microsoft/UniSpeech/blob/main/downstreams/speaker_verification/models/
 # part of the code is borrowed from https://github.com/lawlict/ECAPA-TDNN
 
@@ -16,7 +16,7 @@ import torchaudio
 from datasets import load_dataset
 from tqdm import tqdm
 
-from habibi_tts.eval.utils_eval import get_single_prompt
+from Areebb_tts.eval.utils_eval import get_single_prompt
 
 
 device = (
@@ -322,7 +322,7 @@ def calculate_spksim(wav_dir, dialect, ckpt, single):
     model = model.to(device)
     model.eval()
 
-    benchmark = load_dataset("SWivid/Habibi", dialect, split="test")
+    benchmark = load_dataset("SWivid/Areebb_tts", dialect, split="test")
     spk_id_dict = defaultdict(list)
     for obj in benchmark:
         spk_id_dict[obj["speaker_id"]].append(obj)
@@ -397,3 +397,4 @@ if __name__ == "__main__":
 
     print(f"SPK-SIM: {np.mean(sim_scores)}")
     print(f"SPK-SIM results saved to {spksim_result_path}")
+

@@ -1,4 +1,4 @@
-import random
+﻿import random
 from importlib.resources import files
 
 import editdistance
@@ -8,18 +8,18 @@ import torchaudio
 from f5_tts.model.modules import MelSpec
 from tqdm import tqdm
 
-from habibi_tts.model.utils import dialect_id_map, text_list_formatter
+from Areebb_tts.model.utils import dialect_id_map, text_list_formatter
 
 
 def get_single_prompt(gen_dialect):
     if gen_dialect in ["ALG", "IRQ", "UAE"]:
-        ref_audio = str(files("habibi_tts").joinpath(f"assets/{gen_dialect}.wav"))
+        ref_audio = str(files("Areebb_tts").joinpath(f"assets/{gen_dialect}.wav"))
     elif gen_dialect in ["EGY", "MAR", "MSA"]:
-        ref_audio = str(files("habibi_tts").joinpath(f"assets/{gen_dialect}.mp3"))
+        ref_audio = str(files("Areebb_tts").joinpath(f"assets/{gen_dialect}.mp3"))
     elif gen_dialect[:3] == "SAU":
-        ref_audio = str(files("habibi_tts").joinpath(f"assets/{gen_dialect[4:]}.wav"))
+        ref_audio = str(files("Areebb_tts").joinpath(f"assets/{gen_dialect[4:]}.wav"))
     else:
-        ref_audio = str(files("habibi_tts").joinpath("assets/MSA.mp3"))
+        ref_audio = str(files("Areebb_tts").joinpath("assets/MSA.mp3"))
 
     if gen_dialect == "MSA":
         ref_text = "كان اللعيب حاضرًا في العديد من الأنشطة والفعاليات المرتبطة بكأس العالم، مما سمح للجماهير بالتفاعل معه والتقاط الصور التذكارية."
@@ -177,3 +177,4 @@ def word_error_rate(hypotheses, references, use_cer=False):
     else:
         wer = float("inf")
     return wer
+
