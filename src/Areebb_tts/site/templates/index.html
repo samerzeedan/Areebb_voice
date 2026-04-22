@@ -12,14 +12,13 @@
             <h1>Areeb Site</h1>
             <p>Character TTS + Voice Chat</p>
         </div>
-        <div class="badge">LLM: {{ model_name }}</div>
     </header>
 
     <main class="container">
         <aside class="sidebar">
-            <h2>Character</h2>
-            <label for="character-select">Choose character</label>
-            <select id="character-select"></select>
+            <h2>Voice Setup</h2>
+            <label for="dialect-select">Choose dialect</label>
+            <select id="dialect-select"></select>
 
             <label for="model-select">TTS model</label>
             <select id="model-select">
@@ -27,7 +26,7 @@
                 <option value="Specialized">Specialized</option>
             </select>
 
-            <p class="hint">Specialized works for selected dialects only.</p>
+            <p class="hint">Specialized works for selected dialects only. Character is selected automatically per dialect.</p>
         </aside>
 
         <section class="content">
@@ -45,13 +44,10 @@
             </section>
 
             <section id="panel-chat" class="panel">
-                <h3>Chat with selected character</h3>
+                <h3>AI Voice Chat</h3>
                 <div id="chat-box" class="chat-box"></div>
-                <div class="chat-input-row">
-                    <textarea id="chat-input" rows="3" placeholder="Write your message..."></textarea>
-                    <button id="chat-send" class="primary">Send</button>
-                </div>
-                <audio id="chat-audio" controls></audio>
+                <button id="chat-toggle-btn" class="primary chat-toggle">Start Conversation</button>
+                <p id="chat-transcript" class="transcript hidden" aria-hidden="true">Press Start Conversation, then speak.</p>
                 <p id="chat-status" class="status"></p>
             </section>
         </section>

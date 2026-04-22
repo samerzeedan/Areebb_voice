@@ -31,6 +31,21 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "Qwen2.5:7b-instruct-q4_K_M")
 
 SPECIALIZED_DIALECTS = {"MSA", "SAU", "UAE", "ALG", "IRQ", "EGY", "MAR"}
+DIALECT_LABELS = {
+    "MSA": "MSA (Modern Standard Arabic)",
+    "SAU": "SAU (Saudi)",
+    "UAE": "UAE (Emirati)",
+    "ALG": "ALG (Algerian)",
+    "IRQ": "IRQ (Iraqi)",
+    "EGY": "EGY (Egyptian)",
+    "MAR": "MAR (Moroccan)",
+    "OMN": "OMN (Omani)",
+    "TUN": "TUN (Tunisian)",
+    "LEV": "LEV (Levantine)",
+    "SDN": "SDN (Sudanese)",
+    "LBY": "LBY (Libyan)",
+    "UNK": "UNK (Unknown/Auto)",
+}
 MODEL_STEP_BY_DIALECT = {
     "MSA": 200000,
     "SAU": 200000,
@@ -71,6 +86,83 @@ CHARACTERS: dict[str, dict[str, str]] = {
         "ref_audio": str(files("Areebb_tts").joinpath("assets/MAR.mp3")),
         "ref_text": "إذا بغيتي شي صوت باللهجة المغربية هذا أحسن واحد غادي تلقاه.",
         "persona": "You are a Moroccan coach. Respond with confidence and short actionable advice.",
+    },
+    "hijazi_voice": {
+        "name": "Hijazi Voice",
+        "dialect": "SAU",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/Hijazi.wav")),
+        "ref_text": "ابغاك تحقق معاه بس بشكل ودي لانه سلطان يمر بظروف صعبة شوية.",
+        "persona": "You are a Hijazi Arabic speaker. Keep the response empathetic and natural.",
+    },
+    "gulf_voice": {
+        "name": "Gulf Voice",
+        "dialect": "SAU",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/Gulf.wav")),
+        "ref_text": "وين تو الناس متى تصحى ومتى تفطر وتغير يبيلك ساعة.",
+        "persona": "You are a Gulf Arabic speaker with a clear and direct style.",
+    },
+    "uae_voice": {
+        "name": "UAE Voice",
+        "dialect": "UAE",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/UAE.wav")),
+        "ref_text": "قمنا نشتريها بشكل متكرر أو لما نلقى ستايل يعجبنا.",
+        "persona": "You are an Emirati speaker. Reply in concise and friendly Arabic.",
+    },
+    "algerian_voice": {
+        "name": "Algerian Voice",
+        "dialect": "ALG",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/ALG.wav")),
+        "ref_text": "أنيا هكا باغية ناكل هكا أني ن نشوف فيها الحاجة هذيكا.",
+        "persona": "You are an Algerian Arabic speaker. Reply naturally and confidently.",
+    },
+    "iraqi_voice": {
+        "name": "Iraqi Voice",
+        "dialect": "IRQ",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/IRQ.wav")),
+        "ref_text": "يعني ااا ما نقدر ناخذ وقت أكثر، لأنه شروط كلش يحتاجلها وقت.",
+        "persona": "You are an Iraqi Arabic speaker. Keep responses practical and clear.",
+    },
+    "omani_voice": {
+        "name": "Omani Voice",
+        "dialect": "OMN",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/MSA.mp3")),
+        "ref_text": "هذا صوت مرجعي موحد لاستخدام اللهجة العمانية ضمن النموذج الموحد.",
+        "persona": "You are an Omani Arabic assistant. Keep the tone warm and respectful.",
+    },
+    "tunisian_voice": {
+        "name": "Tunisian Voice",
+        "dialect": "TUN",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/MSA.mp3")),
+        "ref_text": "هذا صوت مرجعي موحد لاستخدام اللهجة التونسية ضمن النموذج الموحد.",
+        "persona": "You are a Tunisian Arabic assistant. Keep answers brief and helpful.",
+    },
+    "levantine_voice": {
+        "name": "Levantine Voice",
+        "dialect": "LEV",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/MSA.mp3")),
+        "ref_text": "هذا صوت مرجعي موحد لاستخدام اللهجة الشامية ضمن النموذج الموحد.",
+        "persona": "You are a Levantine Arabic assistant. Use a friendly conversational tone.",
+    },
+    "sudanese_voice": {
+        "name": "Sudanese Voice",
+        "dialect": "SDN",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/MSA.mp3")),
+        "ref_text": "هذا صوت مرجعي موحد لاستخدام اللهجة السودانية ضمن النموذج الموحد.",
+        "persona": "You are a Sudanese Arabic assistant. Respond clearly and respectfully.",
+    },
+    "libyan_voice": {
+        "name": "Libyan Voice",
+        "dialect": "LBY",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/MSA.mp3")),
+        "ref_text": "هذا صوت مرجعي موحد لاستخدام اللهجة الليبية ضمن النموذج الموحد.",
+        "persona": "You are a Libyan Arabic assistant. Keep responses concise and practical.",
+    },
+    "unknown_voice": {
+        "name": "Unknown / Auto",
+        "dialect": "UNK",
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/MSA.mp3")),
+        "ref_text": "صوت مرجعي افتراضي لحالة اللهجة غير المعروفة.",
+        "persona": "You are a generic Arabic assistant that adapts to user style.",
     },
 }
 
@@ -164,7 +256,16 @@ def synthesize_text(character_id: str, text: str, model_type: str) -> str:
 
 
 def call_ollama_chat(persona: str, user_message: str, history: list[ChatTurn]) -> str:
-    messages: list[dict[str, str]] = [{"role": "system", "content": persona}]
+    messages: list[dict[str, str]] = [
+        {"role": "system", "content": persona},
+        {
+            "role": "system",
+            "content": (
+                "Keep the conversation focused on AI topics only (AI tools, models, coding, automation, prompts, "
+                "and practical AI use-cases). If the user asks about unrelated topics, gently steer back to AI."
+            ),
+        },
+    ]
     for turn in history:
         if turn.role in {"user", "assistant"} and turn.content.strip():
             messages.append({"role": turn.role, "content": turn.content.strip()})
@@ -206,9 +307,19 @@ def list_characters() -> dict[str, Any]:
                 "id": character_id,
                 "name": cfg["name"],
                 "dialect": cfg["dialect"],
+                "dialect_label": DIALECT_LABELS.get(cfg["dialect"], cfg["dialect"]),
+                "supports_specialized": cfg["dialect"] in SPECIALIZED_DIALECTS,
             }
         )
-    return {"characters": items, "ollama_model": OLLAMA_MODEL}
+    dialect_order = list(DIALECT_LABELS.keys())
+    dialects = []
+    for code in dialect_order:
+        count = sum(1 for c in items if c["dialect"] == code)
+        if count > 0:
+            dialects.append({"code": code, "label": DIALECT_LABELS.get(code, code)})
+
+    items.sort(key=lambda c: (dialect_order.index(c["dialect"]), c["name"]))
+    return {"characters": items, "dialects": dialects, "ollama_model": OLLAMA_MODEL}
 
 
 @app.post("/api/tts")
@@ -254,7 +365,7 @@ def run() -> None:
     import uvicorn
 
     host = os.getenv("AREEB_HOST", "0.0.0.0")
-    port = int(os.getenv("AREEB_PORT", "7860"))
+    port = int(os.getenv("AREEB_PORT", "5050"))
     uvicorn.run("Areebb_tts.site.app:app", host=host, port=port, reload=False)
 
 

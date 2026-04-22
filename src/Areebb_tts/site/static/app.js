@@ -1,19 +1,28 @@
 const state = {
   characters: [],
+  dialects: [],
+  currentCharacters: [],
+  activeCharacterId: null,
   history: [],
+  speechRecognizer: null,
+  liveTranscript: "",
+  speechSupported: false,
+  isVoiceListening: false,
+  isProcessing: false,
+  isConversationActive: false,
+  ttsPlayer: new Audio(),
 };
 
 const el = {
-  characterSelect: document.getElementById("character-select"),
+  dialectSelect: document.getElementById("dialect-select"),
   modelSelect: document.getElementById("model-select"),
   ttsInput: document.getElementById("tts-input"),
   ttsGenerate: document.getElementById("tts-generate"),
   ttsAudio: document.getElementById("tts-audio"),
   ttsStatus: document.getElementById("tts-status"),
-  chatInput: document.getElementById("chat-input"),
-  chatSend: document.getElementById("chat-send"),
+  chatToggleBtn: document.getElementById("chat-toggle-btn"),
+  chatTranscript: document.getElementById("chat-transcript"),
   chatBox: document.getElementById("chat-box"),
-  chatAudio: document.getElementById("chat-audio"),
   chatStatus: document.getElementById("chat-status"),
   tabTts: document.getElementById("tab-tts"),
   tabChat: document.getElementById("tab-chat"),
@@ -36,18 +45,69 @@ function renderChatBubble(role, content) {
   el.chatBox.scrollTop = el.chatBox.scrollHeight;
 }
 
+function dialectToLocale(dialectCode) {
+  const map = {
+    MSA: "ar-SA",
+    SAU: "ar-SA",
+    UAE: "ar-AE",
+    ALG: "ar-DZ",
+    IRQ: "ar-IQ",
+    EGY: "ar-EG",
+    MAR: "ar-MA",
+    OMN: "ar-OM",
+    TUN: "ar-TN",
+    LEV: "ar-LB",
+    SDN: "ar-SD",
+    LBY: "ar-LY",
+    UNK: "ar-SA",
+  };
+  return map[dialectCode] || "ar-SA";
+}
+
+function getActiveCharacter() {
+  return state.characters.find((c) => c.id === state.activeCharacterId) || null;
+}
+
+function enforceModelCompatibility() {
+  const selected = getActiveCharacter();
+  if (!selected) return;
+
+  const specializedOption = [...el.modelSelect.options].find((o) => o.value === "Specialized");
+  if (!specializedOption) return;
+
+  const canUseSpecialized = !!selected.supports_specialized;
+  specializedOption.disabled = !canUseSpecialized;
+  if (!canUseSpecialized && el.modelSelect.value === "Specialized") {
+    el.modelSelect.value = "Unified";
+  }
+}
+
+function renderCharacterOptions(dialectCode) {
+  state.currentCharacters = state.characters.filter((c) => c.dialect === dialectCode);
+  state.activeCharacterId = state.currentCharacters[0]?.id || null;
+
+  enforceModelCompatibility();
+}
+
 async function loadCharacters() {
   const res = await fetch("/api/characters");
   if (!res.ok) throw new Error("Cannot fetch characters");
   const data = await res.json();
   state.characters = data.characters;
-  el.characterSelect.innerHTML = "";
-  state.characters.forEach((c) => {
+  state.dialects = data.dialects || [];
+
+  el.dialectSelect.innerHTML = "";
+  state.dialects.forEach((d) => {
     const option = document.createElement("option");
-    option.value = c.id;
-    option.textContent = `${c.name} (${c.dialect})`;
-    el.characterSelect.appendChild(option);
+    option.value = d.code;
+    option.textContent = d.label;
+    el.dialectSelect.appendChild(option);
   });
+
+  const firstDialect = state.dialects[0]?.code;
+  if (firstDialect) {
+    renderCharacterOptions(firstDialect);
+  }
 }
 
 async function onGenerateTts() {
@@ -64,7 +124,7 @@ async function onGenerateTts() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        character_id: el.characterSelect.value,
+        character_id: state.activeCharacterId,
         text: text,
         model_type: el.modelSelect.value,
       }),
@@ -81,16 +141,15 @@ async function onGenerateTts() {
   }
 }
 
-async function onSendChat() {
-  const message = el.chatInput.value.trim();
+async function sendChatMessage(message) {
   if (!message) {
-    el.chatStatus.textContent = "Please enter a message.";
+    el.chatStatus.textContent = "No speech detected. Try recording again.";
     return;
   }
 
   renderChatBubble("user", message);
-  el.chatInput.value = "";
-  el.chatSend.disabled = true;
+  state.isProcessing = true;
+  state.isVoiceListening = false;
   el.chatStatus.textContent = "Thinking and generating voice...";
 
   try {
@@ -98,7 +157,7 @@ async function onSendChat() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        character_id: el.characterSelect.value,
+        character_id: state.activeCharacterId,
         message: message,
         model_type: el.modelSelect.value,
         history: state.history,
@@ -110,30 +169,170 @@ async function onSendChat() {
 
     state.history = data.history;
     renderChatBubble("assistant", data.assistant_text);
-    el.chatAudio.src = data.audio_url + `?t=${Date.now()}`;
+    state.ttsPlayer.src = data.audio_url + `?t=${Date.now()}`;
+    await state.ttsPlayer.play().catch(() => {});
     el.chatStatus.textContent = "Reply ready.";
   } catch (err) {
     el.chatStatus.textContent = err.message;
   } finally {
-    el.chatSend.disabled = false;
+    state.isProcessing = false;
+    if (state.speechSupported && state.isConversationActive && el.panelChat.classList.contains("active")) {
+      startListening();
+    }
   }
 }
 
 function resetChatOnCharacterChange() {
   state.history = [];
   el.chatBox.innerHTML = "";
-  el.chatAudio.removeAttribute("src");
+  state.ttsPlayer.pause();
+  state.ttsPlayer.removeAttribute("src");
+  state.ttsPlayer.load();
   el.chatStatus.textContent = "Chat reset for selected character.";
+  el.chatTranscript.textContent = "Your speech text will appear here...";
+  state.liveTranscript = "";
+}
+
+function onDialectChange() {
+  const dialectCode = el.dialectSelect.value;
+  renderCharacterOptions(dialectCode);
+  resetChatOnCharacterChange();
+  if (state.speechSupported && state.isConversationActive && el.panelChat.classList.contains("active")) {
+    startListening();
+  }
+}
+
+function initSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    el.chatStatus.textContent = "Browser does not support speech recognition. Use Chrome or Edge.";
+    el.chatTranscript.textContent = "Speech recognition is not supported in this browser.";
+    return;
+  }
+  state.speechSupported = true;
+
+  const recognizer = new SpeechRecognition();
+  recognizer.continuous = true;
+  recognizer.interimResults = true;
+  recognizer.maxAlternatives = 1;
+  state.speechRecognizer = recognizer;
+
+  recognizer.onstart = () => {
+    state.isVoiceListening = true;
+    el.chatStatus.textContent = "Listening... speak naturally.";
+    state.liveTranscript = "";
+    if (!state.isProcessing) {
+      el.chatTranscript.textContent = "Listening...";
+    }
+  };
+
+  recognizer.onresult = (event) => {
+    let interim = "";
+    let finalText = "";
+    for (let i = event.resultIndex; i < event.results.length; i += 1) {
+      const text = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalText += text + " ";
+      } else {
+        interim += text + " ";
+      }
+    }
+    const merged = (finalText || interim).trim();
+    if (merged) {
+      state.liveTranscript = merged;
+      el.chatTranscript.textContent = merged;
+    }
+    if (finalText.trim() && !state.isProcessing) {
+      recognizer.stop();
+    }
+  };
+
+  recognizer.onerror = (event) => {
+    // Keep speech engine errors silent in UI for cleaner chat experience.
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      el.chatStatus.textContent = "Microphone permission is required for voice chat.";
+    } else {
+      el.chatStatus.textContent = "";
+    }
+    state.isVoiceListening = false;
+    if (
+      event.error !== "not-allowed" &&
+      event.error !== "service-not-allowed" &&
+      state.isConversationActive &&
+      el.panelChat.classList.contains("active")
+    ) {
+      setTimeout(startListening, 600);
+    }
+  };
+
+  recognizer.onend = async () => {
+    state.isVoiceListening = false;
+    const message = state.liveTranscript.trim();
+    if (message && !state.isProcessing) {
+      await sendChatMessage(message);
+      return;
+    }
+    if (!state.isProcessing && state.isConversationActive && el.panelChat.classList.contains("active")) {
+      setTimeout(startListening, 400);
+    }
+  };
+}
+
+function startListening() {
+  if (!state.speechRecognizer || state.isProcessing || state.isVoiceListening) return;
+  const selected = getActiveCharacter();
+  if (!selected || !el.panelChat.classList.contains("active")) {
+    return;
+  }
+  try {
+    state.liveTranscript = "";
+    state.speechRecognizer.lang = dialectToLocale(selected.dialect);
+    state.speechRecognizer.start();
+  } catch {
+    // Ignore "already started" browser errors.
+  }
+}
+
+function stopListening() {
+  if (!state.speechRecognizer || !state.isVoiceListening) return;
+  state.speechRecognizer.stop();
+}
+
+function toggleConversation() {
+  if (!state.speechSupported) return;
+  state.isConversationActive = !state.isConversationActive;
+
+  if (state.isConversationActive) {
+    el.chatToggleBtn.textContent = "Stop Conversation";
+    el.chatStatus.textContent = "Conversation started. Speak now...";
+    if (el.panelChat.classList.contains("active")) {
+      startListening();
+    }
+  } else {
+    el.chatToggleBtn.textContent = "Start Conversation";
+    el.chatStatus.textContent = "Conversation stopped.";
+    stopListening();
+  }
 }
 
 async function bootstrap() {
   await loadCharacters();
+  initSpeechRecognition();
   activeTab(true);
-  el.tabTts.addEventListener("click", () => activeTab(true));
-  el.tabChat.addEventListener("click", () => activeTab(false));
+  el.tabTts.addEventListener("click", () => {
+    activeTab(true);
+    stopListening();
+  });
+  el.tabChat.addEventListener("click", () => {
+    activeTab(false);
+    if (state.speechSupported && state.isConversationActive) {
+      startListening();
+    }
+  });
   el.ttsGenerate.addEventListener("click", onGenerateTts);
-  el.chatSend.addEventListener("click", onSendChat);
-  el.characterSelect.addEventListener("change", resetChatOnCharacterChange);
+  el.dialectSelect.addEventListener("change", onDialectChange);
+  el.modelSelect.addEventListener("change", enforceModelCompatibility);
+  el.chatToggleBtn.addEventListener("click", toggleConversation);
 }
 
 bootstrap().catch((err) => {
