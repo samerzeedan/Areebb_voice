@@ -119,9 +119,13 @@ CHARACTERS: dict[str, dict[str, str]] = {
     "egyptian_assistant": {
         "name": "Egyptian Assistant",
         "dialect": "EGY",
-        "ref_audio": str(files("Areebb_tts").joinpath("assets/EGY.mp3")),
+        # WAV avoids MP3/ffmpeg edge cases in pydub preprocessing on some servers.
+        "ref_audio": str(files("Areebb_tts").joinpath("assets/EGY.wav")),
         "ref_text": "ايه الكلام. بقولك ايه. استخدم صوتي في المحادثات.",
-        "persona": "You are an Egyptian Arabic assistant that gives direct and helpful answers.",
+        "persona": (
+            "You are an Egyptian Arabic assistant. Always reply in Egyptian Arabic (عامية مصرية) "
+            "using Arabic script, not English, so the voice engine can speak your answer."
+        ),
     },
     "moroccan_coach": {
         "name": "Moroccan Coach",

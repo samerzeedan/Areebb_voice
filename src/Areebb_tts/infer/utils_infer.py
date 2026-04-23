@@ -209,6 +209,8 @@ def infer_process(
     max_chars = int(ref_text_bytes / max(ref_dur, 1e-3) * gen_budget_sec * speed)
     max_chars = max(40, max_chars)
     gen_text_batches = chunk_text(gen_text, max_chars=max_chars)
+    if not gen_text_batches:
+        gen_text_batches = [gen_text.strip()]
     for i, gen_text in enumerate(gen_text_batches):
         print(f"gen_text {i}", gen_text)
     print("\n")
