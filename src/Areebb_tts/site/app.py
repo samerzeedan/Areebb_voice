@@ -5,6 +5,7 @@ from functools import lru_cache
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin
 
 from dotenv import load_dotenv
 import requests
@@ -26,7 +27,7 @@ from Areebb_tts.model.utils import dialect_id_map
 
 SITE_DIR = Path(__file__).resolve().parent
 # Repo root (folder containing pyproject.toml); same place as .env.example documents.
-REPO_ROOT = SITE_DIR.parents[3]
+REPO_ROOT = SITE_DIR.parents[2]
 load_dotenv(REPO_ROOT / ".env")
 
 OUTPUT_DIR = REPO_ROOT / "generated_audio"
@@ -49,6 +50,16 @@ REMOTE_TTS_URL = (
 REMOTE_TTS_METHOD = os.getenv("REMOTE_TTS_METHOD", "POST").strip().upper()
 REMOTE_TTS_JSON = os.getenv("REMOTE_TTS_JSON", "1").strip() not in {"0", "false", "False", "no", "NO"}
 REMOTE_TTS_TIMEOUT = int(os.getenv("REMOTE_TTS_TIMEOUT", "300"))
+
+# Keep site inference defaults aligned with infer_gradio / infer.utils_infer.
+TTS_TARGET_RMS = float(os.getenv("TTS_TARGET_RMS", "0.1"))
+TTS_CROSS_FADE_DURATION = float(os.getenv("TTS_CROSS_FADE_DURATION", "0.15"))
+TTS_NFE_STEP = int(os.getenv("TTS_NFE_STEP", "32"))
+TTS_CFG_STRENGTH = float(os.getenv("TTS_CFG_STRENGTH", "2.0"))
+TTS_SWAY_SAMPLING_COEF = float(os.getenv("TTS_SWAY_SAMPLING_COEF", "-1.0"))
+TTS_SPEED = float(os.getenv("TTS_SPEED", "1.0"))
+_tts_fix_duration_env = os.getenv("TTS_FIX_DURATION", "").strip()
+TTS_FIX_DURATION = float(_tts_fix_duration_env) if _tts_fix_duration_env else None
 
 SPECIALIZED_DIALECTS = {"MSA", "SAU", "UAE", "ALG", "IRQ", "EGY", "MAR"}
 DIALECT_LABELS = {
@@ -269,6 +280,13 @@ def synthesize_text(character_id: str, text: str, model_type: str) -> str:
         cleaned_text,
         tts_model,
         vocoder,
+        target_rms=TTS_TARGET_RMS,
+        cross_fade_duration=TTS_CROSS_FADE_DURATION,
+        nfe_step=TTS_NFE_STEP,
+        cfg_strength=TTS_CFG_STRENGTH,
+        sway_sampling_coef=TTS_SWAY_SAMPLING_COEF,
+        speed=TTS_SPEED,
+        fix_duration=TTS_FIX_DURATION,
         dialect_id=dialect_id,
     )
 
@@ -286,6 +304,13 @@ def synthesize_via_remote_tts(character_id: str, character: dict[str, str], text
         "model_type": model_type,
         "character_id": character_id,
         "voice": character_id,
+        "target_rms": TTS_TARGET_RMS,
+        "cross_fade_duration": TTS_CROSS_FADE_DURATION,
+        "nfe_step": TTS_NFE_STEP,
+        "cfg_strength": TTS_CFG_STRENGTH,
+        "sway_sampling_coef": TTS_SWAY_SAMPLING_COEF,
+        "speed": TTS_SPEED,
+        "fix_duration": TTS_FIX_DURATION,
     }
     headers = {}
     hf_token = os.getenv("HF_TOKEN", "").strip()
@@ -319,7 +344,9 @@ def synthesize_via_remote_tts(character_id: str, character: dict[str, str], text
             output_path.write_bytes(raw)
         elif audio_url:
             try:
-                audio_resp = requests.get(audio_url, timeout=REMOTE_TTS_TIMEOUT)
+                # Some remote services return relative audio paths (e.g. /audio/file.wav).
+                resolved_audio_url = urljoin(REMOTE_TTS_URL, str(audio_url))
+                audio_resp = requests.get(resolved_audio_url, timeout=REMOTE_TTS_TIMEOUT)
                 audio_resp.raise_for_status()
             except requests.RequestException as exc:
                 raise HTTPException(status_code=502, detail=f"Remote TTS audio_url fetch failed: {exc}") from exc
