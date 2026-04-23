@@ -1,0 +1,45 @@
+# After you push to `allter`, GitHub pulls the same branch on your machine over SSH.
+#
+# Repo → Settings → Secrets and variables → Actions → New repository secret:
+#   DEPLOY_HOST       e.g. ssh123.vast.ai or the instance IP
+#   DEPLOY_USER       usually root or your login user on the GPU box
+#   DEPLOY_SSH_KEY    full private key (PEM) that can SSH into that host (paste contents of id_rsa)
+#   DEPLOY_PATH       absolute path to the repo on the server, e.g. /workspace/Habibi-TTS
+#
+# Optional repository variable (Settings → Secrets and variables → Actions → Variables):
+#   DEPLOY_SSH_PORT   SSH port if not 22 (e.g. Vast mapped port). Defaults to 22 if unset.
+#
+# Restart the app yourself once (systemd, screen, tmux), or add a small script on the server
+# that systemd runs on a timer, or extend the script block below with your restart command.
+
+name: Deploy allter (remote git pull)
+
+on:
+  push:
+    branches:
+      - allter
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-allter
+  cancel-in-progress: true
+
+jobs:
+  pull-on-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update repo on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch origin
+            git checkout allter
+            git reset --hard origin/allter
+            pip install -q -e .
