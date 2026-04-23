@@ -1,5 +1,6 @@
 import base64
 import os
+import random
 import uuid
 from functools import lru_cache
 from importlib.resources import files
@@ -10,6 +11,8 @@ from urllib.parse import urljoin
 from dotenv import load_dotenv
 import requests
 import soundfile as sf
+import numpy as np
+import torch
 from cached_path import cached_path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, Response
@@ -55,6 +58,8 @@ TTS_SWAY_SAMPLING_COEF = float(os.getenv("TTS_SWAY_SAMPLING_COEF", "-1.0"))
 TTS_SPEED = float(os.getenv("TTS_SPEED", "1.0"))
 _tts_fix_duration_env = os.getenv("TTS_FIX_DURATION", "").strip()
 TTS_FIX_DURATION = float(_tts_fix_duration_env) if _tts_fix_duration_env else None
+# -1 means random each request (like free sampling); any other value makes output deterministic.
+TTS_SEED = int(os.getenv("TTS_SEED", "-1"))
 
 SPECIALIZED_DIALECTS = {"MSA", "SAU", "UAE", "ALG", "IRQ", "EGY", "MAR"}
 DIALECT_LABELS = {
@@ -264,6 +269,13 @@ def synthesize_text(character_id: str, text: str, model_type: str) -> str:
     if REMOTE_TTS_URL:
         return synthesize_via_remote_tts(character_id, character, cleaned_text, model_type)
 
+    if TTS_SEED >= 0:
+        random.seed(TTS_SEED)
+        np.random.seed(TTS_SEED)
+        torch.manual_seed(TTS_SEED)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(TTS_SEED)
+
     ref_audio, ref_text = preprocess_ref_audio_text(character["ref_audio"], character["ref_text"])
     tts_model = get_model(model_type, character["dialect"])
     vocoder = get_vocoder()
@@ -305,6 +317,7 @@ def synthesize_via_remote_tts(character_id: str, character: dict[str, str], text
         "sway_sampling_coef": TTS_SWAY_SAMPLING_COEF,
         "speed": TTS_SPEED,
         "fix_duration": TTS_FIX_DURATION,
+        "seed": TTS_SEED,
     }
     headers = {}
     hf_token = os.getenv("HF_TOKEN", "").strip()
