@@ -1,15 +1,18 @@
+import base64
 import os
 import uuid
 from functools import lru_cache
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin
 
+from dotenv import load_dotenv
 import requests
 import soundfile as sf
 from cached_path import cached_path
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from f5_tts.infer.utils_infer import load_model, load_vocoder, preprocess_ref_audio_text
@@ -24,11 +27,34 @@ from Areebb_tts.model.utils import dialect_id_map
 
 SITE_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SITE_DIR.parents[2]
+load_dotenv(ROOT_DIR / ".env")
 OUTPUT_DIR = ROOT_DIR / "generated_audio"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "Qwen2.5:7b-instruct-q4_K_M")
+HF_VOICE_REPO = os.getenv("AREEB_HF_VOICE_REPO", os.getenv("HF_VOICE_REPO", "SWivid/Habibi-TTS"))
+
+REMOTE_TTS_URL = (
+    os.getenv("AREEBB_TTS_URL")
+    or os.getenv("areebb_tts_url")
+    or os.getenv("AREEB_REMOTE_TTS_URL")
+    or os.getenv("REMOTE_TTS_URL")
+    or ""
+).strip()
+REMOTE_TTS_METHOD = os.getenv("REMOTE_TTS_METHOD", "POST").strip().upper()
+REMOTE_TTS_JSON = os.getenv("REMOTE_TTS_JSON", "1").strip() not in {"0", "false", "False", "no", "NO"}
+REMOTE_TTS_TIMEOUT = int(os.getenv("REMOTE_TTS_TIMEOUT", "300"))
+
+# Match Gradio/infer defaults by default (overridable via .env).
+TTS_TARGET_RMS = float(os.getenv("TTS_TARGET_RMS", "0.1"))
+TTS_CROSS_FADE_DURATION = float(os.getenv("TTS_CROSS_FADE_DURATION", "0.15"))
+TTS_NFE_STEP = int(os.getenv("TTS_NFE_STEP", "32"))
+TTS_CFG_STRENGTH = float(os.getenv("TTS_CFG_STRENGTH", "2.0"))
+TTS_SWAY_SAMPLING_COEF = float(os.getenv("TTS_SWAY_SAMPLING_COEF", "-1.0"))
+TTS_SPEED = float(os.getenv("TTS_SPEED", "1.0"))
+_tts_fix_duration_env = os.getenv("TTS_FIX_DURATION", "").strip()
+TTS_FIX_DURATION = float(_tts_fix_duration_env) if _tts_fix_duration_env else None
 
 SPECIALIZED_DIALECTS = {"MSA", "SAU", "UAE", "ALG", "IRQ", "EGY", "MAR"}
 DIALECT_LABELS = {
@@ -213,12 +239,12 @@ def get_model(model_type: str, dialect: str) -> Any:
         raise HTTPException(status_code=400, detail=f"Specialized model not available for {dialect}")
 
     if normalized_type == "Unified":
-        model_path = str(cached_path("hf://SWivid/Areebb_tts/Unified/model_200000.safetensors"))
-        vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Unified/vocab.txt"))
+        model_path = str(cached_path(f"hf://{HF_VOICE_REPO}/Unified/model_200000.safetensors"))
+        vocab_path = str(cached_path(f"hf://{HF_VOICE_REPO}/Unified/vocab.txt"))
     else:
         step = MODEL_STEP_BY_DIALECT[dialect]
-        model_path = str(cached_path(f"hf://SWivid/Areebb_tts/Specialized/{dialect}/model_{step}.safetensors"))
-        vocab_path = str(cached_path(f"hf://SWivid/Areebb_tts/Specialized/{dialect}/vocab.txt"))
+        model_path = str(cached_path(f"hf://{HF_VOICE_REPO}/Specialized/{dialect}/model_{step}.safetensors"))
+        vocab_path = str(cached_path(f"hf://{HF_VOICE_REPO}/Specialized/{dialect}/vocab.txt"))
 
     model_cfg = get_model_cfg()
     model_cls = DiT if str(model_cfg.model.backbone) == "DiT" else DiT
@@ -235,6 +261,9 @@ def synthesize_text(character_id: str, text: str, model_type: str) -> str:
     if not cleaned_text:
         raise HTTPException(status_code=400, detail="text cannot be empty")
 
+    if REMOTE_TTS_URL:
+        return synthesize_via_remote_tts(character_id, character, cleaned_text, model_type)
+
     ref_audio, ref_text = preprocess_ref_audio_text(character["ref_audio"], character["ref_text"])
     tts_model = get_model(model_type, character["dialect"])
     vocoder = get_vocoder()
@@ -246,12 +275,82 @@ def synthesize_text(character_id: str, text: str, model_type: str) -> str:
         cleaned_text,
         tts_model,
         vocoder,
+        target_rms=TTS_TARGET_RMS,
+        cross_fade_duration=TTS_CROSS_FADE_DURATION,
+        nfe_step=TTS_NFE_STEP,
+        cfg_strength=TTS_CFG_STRENGTH,
+        sway_sampling_coef=TTS_SWAY_SAMPLING_COEF,
+        speed=TTS_SPEED,
+        fix_duration=TTS_FIX_DURATION,
         dialect_id=dialect_id,
     )
 
     file_name = f"{uuid.uuid4().hex}.wav"
     output_path = OUTPUT_DIR / file_name
     sf.write(output_path, waveform, sample_rate)
+    return f"/audio/{file_name}"
+
+
+def synthesize_via_remote_tts(character_id: str, character: dict[str, str], text: str, model_type: str) -> str:
+    payload = {
+        "text": text,
+        "dialect": character["dialect"],
+        "model_type": model_type,
+        "character_id": character_id,
+        "voice": character_id,
+        "target_rms": TTS_TARGET_RMS,
+        "cross_fade_duration": TTS_CROSS_FADE_DURATION,
+        "nfe_step": TTS_NFE_STEP,
+        "cfg_strength": TTS_CFG_STRENGTH,
+        "sway_sampling_coef": TTS_SWAY_SAMPLING_COEF,
+        "speed": TTS_SPEED,
+        "fix_duration": TTS_FIX_DURATION,
+    }
+    headers = {}
+    hf_token = os.getenv("HF_TOKEN", "").strip()
+    if hf_token:
+        headers["Authorization"] = f"Bearer {hf_token}"
+
+    try:
+        if REMOTE_TTS_METHOD == "GET":
+            response = requests.get(REMOTE_TTS_URL, params=payload, headers=headers, timeout=REMOTE_TTS_TIMEOUT)
+        elif REMOTE_TTS_JSON:
+            response = requests.post(REMOTE_TTS_URL, json=payload, headers=headers, timeout=REMOTE_TTS_TIMEOUT)
+        else:
+            response = requests.post(REMOTE_TTS_URL, data=payload, headers=headers, timeout=REMOTE_TTS_TIMEOUT)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail=f"Remote TTS request failed: {exc}") from exc
+
+    content_type = (response.headers.get("content-type") or "").lower()
+    file_name = f"{uuid.uuid4().hex}.wav"
+    output_path = OUTPUT_DIR / file_name
+
+    if "application/json" in content_type:
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail="Remote TTS returned invalid JSON") from exc
+        audio_b64 = data.get("audio_base64") or data.get("audio")
+        audio_url = data.get("audio_url") or data.get("url")
+        if audio_b64:
+            output_path.write_bytes(base64.b64decode(audio_b64))
+        elif audio_url:
+            resolved_audio_url = urljoin(REMOTE_TTS_URL, str(audio_url))
+            try:
+                audio_resp = requests.get(resolved_audio_url, timeout=REMOTE_TTS_TIMEOUT)
+                audio_resp.raise_for_status()
+            except requests.RequestException as exc:
+                raise HTTPException(status_code=502, detail=f"Remote TTS audio_url fetch failed: {exc}") from exc
+            output_path.write_bytes(audio_resp.content)
+        else:
+            raise HTTPException(
+                status_code=502,
+                detail="Remote TTS JSON must include audio_base64, audio, audio_url, or url",
+            )
+    else:
+        output_path.write_bytes(response.content)
+
     return f"/audio/{file_name}"
 
 
@@ -354,18 +453,18 @@ def health() -> dict[str, str]:
 
 
 @app.get("/favicon.ico")
-def favicon() -> FileResponse:
+def favicon() -> Response:
     icon_path = SITE_DIR / "static" / "favicon.ico"
     if icon_path.exists():
         return FileResponse(icon_path)
-    raise HTTPException(status_code=404)
+    return Response(status_code=204)
 
 
 def run() -> None:
     import uvicorn
 
     host = os.getenv("AREEB_HOST", "0.0.0.0")
-    port = int(os.getenv("AREEB_PORT", "5050"))
+    port = int(os.getenv("AREEB_PORT", "9000"))
     uvicorn.run("Areebb_tts.site.app:app", host=host, port=port, reload=False)
 
 
