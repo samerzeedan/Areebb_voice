@@ -1,6 +1,7 @@
 import base64
 import os
 import random
+import re
 import uuid
 from functools import lru_cache
 from importlib.resources import files
@@ -15,7 +16,7 @@ import numpy as np
 import torch
 from cached_path import cached_path
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from f5_tts.infer.utils_infer import load_model, load_vocoder, preprocess_ref_audio_text
@@ -33,6 +34,17 @@ ROOT_DIR = SITE_DIR.parents[2]
 load_dotenv(ROOT_DIR / ".env")
 OUTPUT_DIR = ROOT_DIR / "generated_audio"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+# Matches synthesize output (`uuid.uuid4().hex`); rejects path segments and odd names.
+_GENERATED_WAV_NAME = re.compile(r"[0-9a-f]{32}\.wav\Z", re.IGNORECASE)
+
+
+def _iter_wav_bytes(path: Path):
+    with path.open("rb") as f:
+        while True:
+            chunk = f.read(1024 * 1024)
+            if not chunk:
+                break
+            yield chunk
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "Qwen2.5:7b-instruct-q4_K_M")
@@ -219,7 +231,25 @@ class ChatRequest(BaseModel):
 app = FastAPI(title="Areeb Site")
 templates = Jinja2Templates(directory=str(SITE_DIR / "templates"))
 app.mount("/static", StaticFiles(directory=str(SITE_DIR / "static")), name="static")
-app.mount("/audio", StaticFiles(directory=str(OUTPUT_DIR)), name="audio")
+
+
+@app.get("/audio/{file_name}")
+def serve_generated_audio(file_name: str) -> StreamingResponse:
+    """Full-body WAV GET (no Range/ETag static handling)."""
+    if not _GENERATED_WAV_NAME.fullmatch(file_name):
+        raise HTTPException(status_code=400, detail="Invalid audio file name")
+    path = OUTPUT_DIR / file_name
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Audio not found")
+    headers = {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+    }
+    return StreamingResponse(
+        _iter_wav_bytes(path),
+        media_type="audio/wav",
+        headers=headers,
+    )
 
 
 @lru_cache(maxsize=1)
