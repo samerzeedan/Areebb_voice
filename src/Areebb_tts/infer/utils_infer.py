@@ -2,6 +2,7 @@
 # Make adjustments inside functions, and consider both gradio and cli scripts if need to change func output format
 import os
 import sys
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -54,6 +55,40 @@ fix_duration = None
 _SENTENCE_SPLIT_RE = re.compile(
     r"(?<=[;:,.!?\u060c\u061b\u061f])\s+|(?<=[；：，。！？])"
 )
+def _chunk_has_letter_or_digit(t: str) -> bool:
+    """True if chunk contains a real letter or digit (Arabic comma U+060C is Po, not Lo)."""
+    for ch in t:
+        if ch.isspace():
+            continue
+        cat = unicodedata.category(ch)
+        if cat.startswith("L") or cat == "Nd":
+            return True
+    return False
+
+
+def _merge_letterless_prefix_chunks(chunks: list[str]) -> list[str]:
+    """Glue punctuation-only fragments onto the following chunk so they are not synthesized alone."""
+    out: list[str] = []
+    pending = ""
+    for c in chunks:
+        t = c.strip()
+        if not t:
+            continue
+        short = len(t.encode("utf-8")) < 48
+        if short and not _chunk_has_letter_or_digit(t):
+            pending = f"{pending} {t}".strip() if pending else t
+            continue
+        if pending:
+            out.append(f"{pending} {t}".strip())
+            pending = ""
+        else:
+            out.append(c.strip())
+    if pending:
+        if out:
+            out[-1] = f"{out[-1]} {pending}".strip()
+        else:
+            out.append(pending)
+    return [x for x in out if x.strip()]
 
 
 def _split_utf8_byte_budget(text: str, max_chars: int) -> list[str]:
@@ -139,7 +174,8 @@ def chunk_text(text, max_chars=135):
             expanded.append(c)
         else:
             expanded.extend(_split_oversized_chunk(c, max_chars))
-    return [x for x in expanded if x.strip()]
+    expanded = [x for x in expanded if x.strip()]
+    return _merge_letterless_prefix_chunks(expanded)
 
 
 # infer process: chunk text -> infer batches [i.e. infer_batch_process()]
@@ -323,6 +359,12 @@ def infer_batch_process(
 
                     if cross_fade_samples <= 0:
                         # No overlap possible, concatenate
+                        final_wave = np.concatenate([prev_wave, next_wave])
+                        continue
+
+                    # Short prev (e.g. punctuation-only chunk) makes prev_wave[:-cross] empty or tiny and
+                    # masks the start of next_wave inside the overlap window.
+                    if len(prev_wave) <= cross_fade_samples or len(next_wave) <= cross_fade_samples:
                         final_wave = np.concatenate([prev_wave, next_wave])
                         continue
 
