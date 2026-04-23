@@ -71,24 +71,24 @@ else:
 
 # common used configs and vocabs
 v1_base_cfg = dict(dim=1024, depth=22, heads=16, ff_mult=2, text_dim=512, conv_layers=4)
-uni_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Unified/vocab.txt"))
-alg_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/ALG/vocab.txt"))
-egy_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/EGY/vocab.txt"))
-irq_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/IRQ/vocab.txt"))
-mar_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/MAR/vocab.txt"))
-msa_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/MSA/vocab.txt"))
-sau_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/SAU/vocab.txt"))
-uae_vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/UAE/vocab.txt"))
+uni_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Unified/vocab.txt"))
+alg_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/ALG/vocab.txt"))
+egy_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/EGY/vocab.txt"))
+irq_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/IRQ/vocab.txt"))
+mar_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/MAR/vocab.txt"))
+msa_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/MSA/vocab.txt"))
+sau_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/SAU/vocab.txt"))
+uae_vocab_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/UAE/vocab.txt"))
 
 # text-to-speech language model gallery
-uni_model_path = str(cached_path("hf://SWivid/Areebb_tts/Unified/model_200000.safetensors"))
-alg_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/ALG/model_100000.safetensors"))
-egy_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/EGY/model_100000.safetensors"))
-irq_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/IRQ/model_100000.safetensors"))
-mar_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/MAR/model_100000.safetensors"))
-msa_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/MSA/model_200000.safetensors"))
-sau_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/SAU/model_200000.safetensors"))
-uae_model_path = str(cached_path("hf://SWivid/Areebb_tts/Specialized/UAE/model_100000.safetensors"))
+uni_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Unified/model_200000.safetensors"))
+alg_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/ALG/model_100000.safetensors"))
+egy_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/EGY/model_100000.safetensors"))
+irq_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/IRQ/model_100000.safetensors"))
+mar_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/MAR/model_100000.safetensors"))
+msa_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/MSA/model_200000.safetensors"))
+sau_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/SAU/model_200000.safetensors"))
+uae_model_path = str(cached_path("hf://SWivid/Habibi-TTS/Specialized/UAE/model_100000.safetensors"))
 
 unified_model = (
     load_model(

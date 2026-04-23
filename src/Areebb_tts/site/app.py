@@ -11,7 +11,7 @@ import requests
 import soundfile as sf
 from cached_path import cached_path
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from f5_tts.infer.utils_infer import load_model, load_vocoder, preprocess_ref_audio_text
@@ -35,8 +35,8 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "Qwen2.5:7b-instruct-q4_K_M")
 
-# Hugging Face repo id for TTS checkpoints (default: SWivid/Areebb_tts). Override via .env.
-HF_VOICE_REPO = os.getenv("AREEB_HF_VOICE_REPO", os.getenv("HF_VOICE_REPO", "SWivid/Areebb_tts"))
+# Hugging Face repo id for TTS checkpoints (default: SWivid/Habibi-TTS). Override via .env.
+HF_VOICE_REPO = os.getenv("AREEB_HF_VOICE_REPO", os.getenv("HF_VOICE_REPO", "SWivid/Habibi-TTS"))
 
 # Optional: remote HTTP TTS service (e.g. http://host:port/tts). If set, /api/tts uses this instead of local GPU inference.
 REMOTE_TTS_URL = (
@@ -434,11 +434,11 @@ def health() -> dict[str, str]:
 
 
 @app.get("/favicon.ico")
-def favicon() -> FileResponse:
+def favicon() -> Response:
     icon_path = SITE_DIR / "static" / "favicon.ico"
     if icon_path.exists():
         return FileResponse(icon_path)
-    raise HTTPException(status_code=404)
+    return Response(status_code=204)
 
 
 def run() -> None:

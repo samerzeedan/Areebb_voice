@@ -33,6 +33,8 @@ from Areebb_tts.infer.utils_infer import (
 )
 from Areebb_tts.model.utils import dialect_id_map
 
+HF_VOICE_REPO = os.getenv("AREEB_HF_VOICE_REPO", os.getenv("HF_VOICE_REPO", "SWivid/Habibi-TTS"))
+
 
 parser = argparse.ArgumentParser(
     prog="python3 infer-cli.py",
@@ -275,8 +277,8 @@ vocoder_name = model_cfg.model.mel_spec.mel_spec_type
 
 if not ckpt_file:
     if model == "Unified":
-        ckpt_file = str(cached_path("hf://SWivid/Areebb_tts/Unified/model_200000.safetensors"))
-        vocab_file = str(cached_path("hf://SWivid/Areebb_tts/Unified/vocab.txt"))
+        ckpt_file = str(cached_path(f"hf://{HF_VOICE_REPO}/Unified/model_200000.safetensors"))
+        vocab_file = str(cached_path(f"hf://{HF_VOICE_REPO}/Unified/vocab.txt"))
     elif model == "Specialized":
         if dialect in ["MSA", "SAU"]:
             ckpt_step = 200000
@@ -286,8 +288,8 @@ if not ckpt_file:
             raise AttributeError(
                 f"[Code infer_cli.py] dialect [{dialect}] not supported with [{model}]. Use [Areebb_tts_infer-cli --help] to check."
             )
-        ckpt_file = str(cached_path(f"hf://SWivid/Areebb_tts/Specialized/{dialect}/model_{ckpt_step}.safetensors"))
-        vocab_file = str(cached_path(f"hf://SWivid/Areebb_tts/Specialized/{dialect}/vocab.txt"))
+        ckpt_file = str(cached_path(f"hf://{HF_VOICE_REPO}/Specialized/{dialect}/model_{ckpt_step}.safetensors"))
+        vocab_file = str(cached_path(f"hf://{HF_VOICE_REPO}/Specialized/{dialect}/vocab.txt"))
     else:
         raise AttributeError(f"[Code infer_cli.py] unexpected model choice: {model}")
     print(f"Using [{model}] model to generated [{dialect}] dialectal text...")
