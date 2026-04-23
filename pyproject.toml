@@ -21,6 +21,7 @@ dependencies = [
     "jinja2",
     "python-multipart",
     "requests",
+    "python-dotenv",
 ]
 
 [project.urls]

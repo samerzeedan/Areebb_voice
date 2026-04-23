@@ -16,6 +16,7 @@ const state = {
 const el = {
   dialectSelect: document.getElementById("dialect-select"),
   modelSelect: document.getElementById("model-select"),
+  modelHint: document.getElementById("model-hint"),
   ttsInput: document.getElementById("tts-input"),
   ttsGenerate: document.getElementById("tts-generate"),
   ttsAudio: document.getElementById("tts-audio"),
@@ -68,17 +69,31 @@ function getActiveCharacter() {
   return state.characters.find((c) => c.id === state.activeCharacterId) || null;
 }
 
-function enforceModelCompatibility() {
-  const selected = getActiveCharacter();
-  if (!selected) return;
+function refreshModelOptions() {
+  const supportsSpecialized = state.currentCharacters.some((c) => c.supports_specialized);
+  const previous = el.modelSelect.value || "Unified";
 
-  const specializedOption = [...el.modelSelect.options].find((o) => o.value === "Specialized");
-  if (!specializedOption) return;
+  el.modelSelect.innerHTML = "";
+  const unifiedOption = document.createElement("option");
+  unifiedOption.value = "Unified";
+  unifiedOption.textContent = "Unified";
+  el.modelSelect.appendChild(unifiedOption);
 
-  const canUseSpecialized = !!selected.supports_specialized;
-  specializedOption.disabled = !canUseSpecialized;
-  if (!canUseSpecialized && el.modelSelect.value === "Specialized") {
+  if (supportsSpecialized) {
+    const specializedOption = document.createElement("option");
+    specializedOption.value = "Specialized";
+    specializedOption.textContent = "Specialized";
+    el.modelSelect.appendChild(specializedOption);
+  }
+
+  if (supportsSpecialized && previous === "Specialized") {
+    el.modelSelect.value = "Specialized";
+    el.modelHint.textContent = "This dialect supports Unified and Specialized.";
+  } else {
     el.modelSelect.value = "Unified";
+    el.modelHint.textContent = supportsSpecialized
+      ? "This dialect supports Unified and Specialized."
+      : "This dialect supports Unified only.";
   }
 }
 
@@ -86,7 +101,18 @@ function renderCharacterOptions(dialectCode) {
   state.currentCharacters = state.characters.filter((c) => c.dialect === dialectCode);
   state.activeCharacterId = state.currentCharacters[0]?.id || null;
 
-  enforceModelCompatibility();
+  refreshModelOptions();
+}
+
+async function parseApiResponse(res) {
+  const body = await res.text();
+  let data = {};
+  try {
+    data = body ? JSON.parse(body) : {};
+  } catch {
+    data = { detail: body || "Unexpected server response." };
+  }
+  return data;
 }
 
 async function loadCharacters() {
@@ -130,7 +156,7 @@ async function onGenerateTts() {
       }),
     });
 
-    const data = await res.json();
+    const data = await parseApiResponse(res);
     if (!res.ok) throw new Error(data.detail || "Failed to generate");
     el.ttsAudio.src = data.audio_url + `?t=${Date.now()}`;
     el.ttsStatus.textContent = "Audio generated.";
@@ -164,7 +190,7 @@ async function sendChatMessage(message) {
       }),
     });
 
-    const data = await res.json();
+    const data = await parseApiResponse(res);
     if (!res.ok) throw new Error(data.detail || "Chat failed");
 
     state.history = data.history;
@@ -331,7 +357,6 @@ async function bootstrap() {
   });
   el.ttsGenerate.addEventListener("click", onGenerateTts);
   el.dialectSelect.addEventListener("change", onDialectChange);
-  el.modelSelect.addEventListener("change", enforceModelCompatibility);
   el.chatToggleBtn.addEventListener("click", toggleConversation);
 }
 

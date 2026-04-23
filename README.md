@@ -62,7 +62,7 @@ This repo now includes `Areeb_site`, a web app without Gradio:
 pip install -e .
 python -m Areebb_tts.site.app
 ```
-Then open `http://localhost:7860`.
+Then open `http://localhost:9000` (or the port set in `AREEB_PORT`).
 
 ### Ollama requirement (for chat mode)
 ```bash
@@ -82,7 +82,7 @@ ollama serve
 ollama pull Qwen2.5:7b-instruct-q4_K_M
 python -m Areebb_tts.site.app
 ```
-Expose port `7860` in Vast.ai and open the provided URL.
+Expose the app port (default `9000`, or `AREEB_PORT`) in Vast.ai and open the provided URL.
 
 
 ## Training & Finetuning

@@ -1,3 +1,4 @@
+import base64
 import os
 import uuid
 from functools import lru_cache
@@ -5,6 +6,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 import requests
 import soundfile as sf
 from cached_path import cached_path
@@ -23,12 +25,30 @@ from Areebb_tts.model.utils import dialect_id_map
 
 
 SITE_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SITE_DIR.parents[2]
-OUTPUT_DIR = ROOT_DIR / "generated_audio"
+# Repo root (folder containing pyproject.toml); same place as .env.example documents.
+REPO_ROOT = SITE_DIR.parents[3]
+load_dotenv(REPO_ROOT / ".env")
+
+OUTPUT_DIR = REPO_ROOT / "generated_audio"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "Qwen2.5:7b-instruct-q4_K_M")
+
+# Hugging Face repo id for TTS checkpoints (default: SWivid/Areebb_tts). Override via .env.
+HF_VOICE_REPO = os.getenv("AREEB_HF_VOICE_REPO", os.getenv("HF_VOICE_REPO", "SWivid/Areebb_tts"))
+
+# Optional: remote HTTP TTS service (e.g. http://host:port/tts). If set, /api/tts uses this instead of local GPU inference.
+REMOTE_TTS_URL = (
+    os.getenv("AREEBB_TTS_URL")
+    or os.getenv("areebb_tts_url")
+    or os.getenv("AREEB_REMOTE_TTS_URL")
+    or os.getenv("REMOTE_TTS_URL")
+    or ""
+).strip()
+REMOTE_TTS_METHOD = os.getenv("REMOTE_TTS_METHOD", "POST").strip().upper()
+REMOTE_TTS_JSON = os.getenv("REMOTE_TTS_JSON", "1").strip() not in {"0", "false", "False", "no", "NO"}
+REMOTE_TTS_TIMEOUT = int(os.getenv("REMOTE_TTS_TIMEOUT", "300"))
 
 SPECIALIZED_DIALECTS = {"MSA", "SAU", "UAE", "ALG", "IRQ", "EGY", "MAR"}
 DIALECT_LABELS = {
@@ -213,12 +233,12 @@ def get_model(model_type: str, dialect: str) -> Any:
         raise HTTPException(status_code=400, detail=f"Specialized model not available for {dialect}")
 
     if normalized_type == "Unified":
-        model_path = str(cached_path("hf://SWivid/Areebb_tts/Unified/model_200000.safetensors"))
-        vocab_path = str(cached_path("hf://SWivid/Areebb_tts/Unified/vocab.txt"))
+        model_path = str(cached_path(f"hf://{HF_VOICE_REPO}/Unified/model_200000.safetensors"))
+        vocab_path = str(cached_path(f"hf://{HF_VOICE_REPO}/Unified/vocab.txt"))
     else:
         step = MODEL_STEP_BY_DIALECT[dialect]
-        model_path = str(cached_path(f"hf://SWivid/Areebb_tts/Specialized/{dialect}/model_{step}.safetensors"))
-        vocab_path = str(cached_path(f"hf://SWivid/Areebb_tts/Specialized/{dialect}/vocab.txt"))
+        model_path = str(cached_path(f"hf://{HF_VOICE_REPO}/Specialized/{dialect}/model_{step}.safetensors"))
+        vocab_path = str(cached_path(f"hf://{HF_VOICE_REPO}/Specialized/{dialect}/vocab.txt"))
 
     model_cfg = get_model_cfg()
     model_cls = DiT if str(model_cfg.model.backbone) == "DiT" else DiT
@@ -234,6 +254,9 @@ def synthesize_text(character_id: str, text: str, model_type: str) -> str:
     cleaned_text = text.strip()
     if not cleaned_text:
         raise HTTPException(status_code=400, detail="text cannot be empty")
+
+    if REMOTE_TTS_URL:
+        return synthesize_via_remote_tts(character_id, character, cleaned_text, model_type)
 
     ref_audio, ref_text = preprocess_ref_audio_text(character["ref_audio"], character["ref_text"])
     tts_model = get_model(model_type, character["dialect"])
@@ -252,6 +275,63 @@ def synthesize_text(character_id: str, text: str, model_type: str) -> str:
     file_name = f"{uuid.uuid4().hex}.wav"
     output_path = OUTPUT_DIR / file_name
     sf.write(output_path, waveform, sample_rate)
+    return f"/audio/{file_name}"
+
+
+def synthesize_via_remote_tts(character_id: str, character: dict[str, str], text: str, model_type: str) -> str:
+    """Call an external TTS HTTP endpoint and save audio to OUTPUT_DIR."""
+    payload = {
+        "text": text,
+        "dialect": character["dialect"],
+        "model_type": model_type,
+        "character_id": character_id,
+        "voice": character_id,
+    }
+    headers = {}
+    hf_token = os.getenv("HF_TOKEN", "").strip()
+    if hf_token:
+        headers["Authorization"] = f"Bearer {hf_token}"
+
+    try:
+        if REMOTE_TTS_METHOD == "GET":
+            response = requests.get(REMOTE_TTS_URL, params=payload, headers=headers, timeout=REMOTE_TTS_TIMEOUT)
+        elif REMOTE_TTS_JSON:
+            response = requests.post(REMOTE_TTS_URL, json=payload, headers=headers, timeout=REMOTE_TTS_TIMEOUT)
+        else:
+            response = requests.post(REMOTE_TTS_URL, data=payload, headers=headers, timeout=REMOTE_TTS_TIMEOUT)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail=f"Remote TTS request failed: {exc}") from exc
+
+    content_type = (response.headers.get("content-type") or "").lower()
+    file_name = f"{uuid.uuid4().hex}.wav"
+    output_path = OUTPUT_DIR / file_name
+
+    if "application/json" in content_type:
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail="Remote TTS returned invalid JSON") from exc
+        audio_b64 = data.get("audio_base64") or data.get("audio")
+        audio_url = data.get("audio_url") or data.get("url")
+        if audio_b64:
+            raw = base64.b64decode(audio_b64)
+            output_path.write_bytes(raw)
+        elif audio_url:
+            try:
+                audio_resp = requests.get(audio_url, timeout=REMOTE_TTS_TIMEOUT)
+                audio_resp.raise_for_status()
+            except requests.RequestException as exc:
+                raise HTTPException(status_code=502, detail=f"Remote TTS audio_url fetch failed: {exc}") from exc
+            output_path.write_bytes(audio_resp.content)
+        else:
+            raise HTTPException(
+                status_code=502,
+                detail="Remote TTS JSON must include audio_base64, audio, audio_url, or url",
+            )
+    else:
+        output_path.write_bytes(response.content)
+
     return f"/audio/{file_name}"
 
 
@@ -365,7 +445,7 @@ def run() -> None:
     import uvicorn
 
     host = os.getenv("AREEB_HOST", "0.0.0.0")
-    port = int(os.getenv("AREEB_PORT", "5050"))
+    port = int(os.getenv("AREEB_PORT", "9000"))
     uvicorn.run("Areebb_tts.site.app:app", host=host, port=port, reload=False)
 
 
