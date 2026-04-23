@@ -50,6 +50,56 @@ fix_duration = None
 
 # chunk text into smaller pieces
 
+# Latin + Arabic sentence punctuation (ASCII comma alone is not enough for Arabic LLM output).
+_SENTENCE_SPLIT_RE = re.compile(
+    r"(?<=[;:,.!?\u060c\u061b\u061f])\s+|(?<=[；：，。！？])"
+)
+
+
+def _split_utf8_byte_budget(text: str, max_chars: int) -> list[str]:
+    """Split so every piece has UTF-8 byte length <= max_chars (character-safe)."""
+    if max_chars < 8:
+        max_chars = 8
+    out: list[str] = []
+    cur = ""
+    for ch in text:
+        cand = cur + ch
+        if len(cand.encode("utf-8")) <= max_chars:
+            cur = cand
+        else:
+            if cur:
+                out.append(cur)
+            cur = ch
+    if cur:
+        out.append(cur)
+    return out
+
+
+def _split_oversized_chunk(text: str, max_chars: int) -> list[str]:
+    """Prefer word boundaries; fall back to byte-budget character walk for long tokens."""
+    text = text.strip()
+    if not text or len(text.encode("utf-8")) <= max_chars:
+        return [text] if text else []
+
+    parts: list[str] = []
+    buf = ""
+    for word in text.split():
+        trial = f"{buf} {word}".strip() if buf else word
+        if len(trial.encode("utf-8")) <= max_chars:
+            buf = trial
+        else:
+            if buf:
+                parts.append(buf)
+            wbytes = len(word.encode("utf-8"))
+            if wbytes <= max_chars:
+                buf = word
+            else:
+                parts.extend(_split_utf8_byte_budget(word, max_chars))
+                buf = ""
+    if buf:
+        parts.append(buf)
+    return parts
+
 
 def chunk_text(text, max_chars=135):
     """
@@ -62,10 +112,12 @@ def chunk_text(text, max_chars=135):
     Returns:
         List[str]: A list of text chunks.
     """
+    if max_chars < 8:
+        max_chars = 8
+
     chunks = []
     current_chunk = ""
-    # Split the text into sentences based on punctuation followed by whitespace
-    sentences = re.split(r"(?<=[;:,.!?])\s+|(?<=[；：，。！？])", text)
+    sentences = _SENTENCE_SPLIT_RE.split(text)
 
     for sentence in sentences:
         if len(current_chunk.encode("utf-8")) + len(sentence.encode("utf-8")) <= max_chars:
@@ -78,7 +130,16 @@ def chunk_text(text, max_chars=135):
     if current_chunk:
         chunks.append(current_chunk.strip())
 
-    return chunks
+    # Long Arabic (or unpunctuated) paragraphs used to stay as one batch and get truncated in the model.
+    expanded: list[str] = []
+    for c in chunks:
+        if not c:
+            continue
+        if len(c.encode("utf-8")) <= max_chars:
+            expanded.append(c)
+        else:
+            expanded.extend(_split_oversized_chunk(c, max_chars))
+    return [x for x in expanded if x.strip()]
 
 
 # infer process: chunk text -> infer batches [i.e. infer_batch_process()]
@@ -105,7 +166,12 @@ def infer_process(
 ):
     # Split the input text into batches
     audio, sr = torchaudio.load(ref_audio)
-    max_chars = int(len(ref_text.encode("utf-8")) / (audio.shape[-1] / sr) * (22 - audio.shape[-1] / sr) * speed)
+    ref_dur = float(audio.shape[-1]) / float(sr)
+    # ~22s total window heuristic; keep budget positive for long reference clips.
+    gen_budget_sec = max(0.5, 22.0 - ref_dur)
+    ref_text_bytes = max(len(ref_text.encode("utf-8")), 1)
+    max_chars = int(ref_text_bytes / max(ref_dur, 1e-3) * gen_budget_sec * speed)
+    max_chars = max(40, max_chars)
     gen_text_batches = chunk_text(gen_text, max_chars=max_chars)
     for i, gen_text in enumerate(gen_text_batches):
         print(f"gen_text {i}", gen_text)
