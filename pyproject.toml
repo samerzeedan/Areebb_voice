@@ -21,6 +21,8 @@ dependencies = [
     "jinja2",
     "python-multipart",
     "requests",
+    "httpx>=0.27",
+    "websockets>=12.0",
 ]
 
 [project.urls]

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Areeb Realtime Voice</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .rt-shell { max-width: 760px; margin: 32px auto; padding: 24px; }
+    .rt-shell h1 { margin-top: 0; }
+    .rt-config { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; margin-bottom: 16px; }
+    .rt-config label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+    .rt-input-row { display: flex; gap: 8px; margin-top: 12px; }
+    .rt-input-row input { flex: 1; padding: 10px 12px; }
+    .rt-buttons { display: flex; gap: 8px; margin-top: 8px; }
+    .rt-status { font-size: 13px; color: #666; margin-top: 12px; }
+    .rt-transcript {
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      min-height: 120px;
+      max-height: 320px;
+      overflow-y: auto;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      direction: rtl;
+      text-align: right;
+    }
+    .rt-row { margin-bottom: 8px; }
+    .rt-role-user { color: #0a4; }
+    .rt-role-asst { color: #04a; }
+    button[disabled] { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <main class="rt-shell">
+    <h1>Realtime Voice (WebSocket)</h1>
+    <p>Streams Ollama deltas through F5-TTS and plays PCM16 frames as they arrive. Sending a new message instantly interrupts the current reply.</p>
+
+    <div class="rt-config">
+      <label>
+        Character
+        <select id="rt-character"></select>
+      </label>
+      <label>
+        Model type
+        <select id="rt-model-type">
+          <option value="Unified">Unified</option>
+          <option value="Specialized">Specialized</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="rt-buttons">
+      <button id="rt-connect">Connect</button>
+      <button id="rt-stop" disabled>Stop / Interrupt</button>
+      <button id="rt-clear">Clear transcript</button>
+    </div>
+
+    <div class="rt-input-row">
+      <input id="rt-input" type="text" placeholder="Type your message and press Enter..." disabled />
+      <button id="rt-send" disabled>Send</button>
+    </div>
+
+    <div class="rt-status" id="rt-status">disconnected</div>
+    <div class="rt-transcript" id="rt-transcript"></div>
+  </main>
+
+  <script src="/static/realtime.js"></script>
+</body>
+</html>
